@@ -8,19 +8,16 @@ import statistics
 
 #Third Party Modules
 import pi_servo_hat       # Pan/Tilt mast controller
-import picamera
-
+from picamera import PiCamera
+import qwiic
 
 tf_width = 299 #Width required for Tensorflow
 tf_height = 299 #Height required for Tensorflow
 tf_bw = True #Whether Tensflow wants black and white
-camera = PiCamera()
 servo = pi_servo_hat.PiServoHat()
+#ToF = qwiic.QwiicVL53L1X()
 
-'''
-take_picture() captures a single black and white frame in the dimensions required for TF
-arguments: outFile - defines where to store the captured image
-'''
+
 def take_picture(outFile):
 	with picamera() as camera:
 		camera.vflip = True
@@ -32,11 +29,7 @@ def take_picture(outFile):
 		camera.color_effects = (128,128) #sets camera to black and white
 		camera.PiResolution(width=tf_width, Height=tf_height)
 		camera.capture(outFile, format="jpeg")
-'''
-take_poicture() captures a single high-resolution image from the pi camera.
-Note: this image will need to be downgrated to 299x299 and converted to black and white for TF
-arguments: outFile - defines where to store the image 
-'''
+
 def take_picture_hd(outFile):
 	with picamera() as camera:
 		camera.vflip = True
@@ -51,21 +44,22 @@ def take_picture_hd(outFile):
 		#camera.exposure_mode = 'off'
 		camera.capture(outFile, format="png")
 
-'''
-convert_pic_to_tf process pic to TF requirements.
-arguments:	inFile - name and path of input file
-			outFile - name and path of outfile
-			outWidth - width of output image (pixels)
-			outHeight - height of output image (pixels)
-			black_and_white - boolean indicating change to black and white
-'''
 def convert_pic_to_tf(inFile, outFile, outWidth, outHeight, black_and_white=True):
 	pass
 
+
+def ToF_to_range():
+    ToF.StartRanging()
+    time.sleep(.005)
+    valuelist = []
+    valuelist.append(ToF.GetDistance())
+    value_median = statistics.median(valueList)
+    return(value_median)
 '''
-point_camera() uses the servos to point the camera in a particular pan and tilt.
-input 1 = up/down
-input 0 = left/right
+def read_ToF():
+    curVal = chan.value
+    curVolt = chan.voltage
+    return (curVal, curVolt)
 '''
 #sets camera servos to center
 def center_camera():
@@ -95,11 +89,18 @@ def main():
 	    picFile = "rocko%0.3d.png" % (PicCount)
 	    time.sleep(1)
 	    take_picture(PicFile)
+	    rRange = ToF_to_range()
+	    print("Picture %s, range %0.3f, azimuth %d" %(PicFile, rRange, Look_Left))
 	    PicCount += 1
     for Look_right():
         right_camera()
         picFile = "rocko%0.3d.png" % (PicCount)
         time.sleep(1)
         take_picture(PicFile)
+        rRange = ToF_to_range()
+        print("Picture %s, range %0.3f, azimuth %d" % (PicFile, rRange, Look_right))
         PicCount += 1
     center_camera()
+    
+if __name__ == '__main__':
+    main()
